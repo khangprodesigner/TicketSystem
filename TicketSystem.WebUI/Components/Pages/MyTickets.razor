@@ -1,0 +1,120 @@
+﻿@page "/my-tickets"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using TicketSystem.Application.Interfaces
+@using TicketSystem.Domain.Entities
+@using TicketSystem.Domain.Enums
+
+@inject ITicketService TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <div>
+            <MudText Typo="Typo.h5" GutterBottom="true">Đơn yêu cầu của tôi</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Quản lý và theo dõi trạng thái các đơn bạn đã tạo</MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+            Tạo đơn mới
+        </MudButton>
+    </MudStack>
+
+    <MudTable Items="@tickets" Dense="true" Hover="true" Striped="true" Loading="@isLoading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Tiêu đề</MudTh>
+            <MudTh>Loại đơn</MudTh>
+            <MudTh>Độ ưu tiên</MudTh>
+            <MudTh>Ngày tạo</MudTh>
+            <MudTh>Trạng thái</MudTh>
+            <MudTh Style="text-align: right">Thao tác</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Tiêu đề">
+                <MudText Typo="Typo.subtitle2">@context.Title</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+            </MudTd>
+            <MudTd DataLabel="Loại đơn">
+                @GetTicketTypeName(context.Type)
+            </MudTd>
+            <MudTd DataLabel="Độ ưu tiên">
+                <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">@context.Priority</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Ngày tạo">@context.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Trạng thái">
+                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Thao tác" Style="text-align: right">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Default" OnClick="@(() => ViewDetails(context.Id))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Class="pa-4">Chưa có phiếu yêu cầu nào.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<Ticket> tickets = new();
+    private bool isLoading = true;
+    private string currentUserId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await LoadTicketsAsync();
+        }
+        isLoading = false;
+    }
+
+    private async Task LoadTicketsAsync()
+    {
+        isLoading = true;
+        tickets = await TicketService.GetMyTicketsAsync(currentUserId);
+        isLoading = false;
+    }
+
+    private Color GetStatusColor(TicketStatus status) => status switch
+    {
+        TicketStatus.Pending => Color.Warning,
+        TicketStatus.Approved => Color.Success,
+        TicketStatus.Rejected => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetPriorityColor(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Urgent => Color.Error,
+        TicketPriority.High => Color.Warning,
+        _ => Color.Info
+    };
+
+    private string GetTicketTypeName(TicketType type) => type switch
+    {
+        TicketType.LeaveRequest => "Nghỉ phép",
+        TicketType.ExpenseClaim => "Thanh toán/Hoàn ứng",
+        TicketType.AssetRequest => "Cấp thiết bị",
+        TicketType.AttendanceAdjustment => "Giải trình chấm công",
+        _ => type.ToString()
+    };
+
+    private void OpenCreateDialog()
+    {
+        Navigation.NavigateTo("/create-ticket");
+    }
+
+    private void ViewDetails(Guid id)
+    {
+        Navigation.NavigateTo($"/tickets/{id}");
+    }
+}

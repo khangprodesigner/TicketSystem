@@ -1,0 +1,161 @@
+﻿@page "/create-ticket"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using FluentValidation
+@using Microsoft.AspNetCore.Authorization
+@using TicketSystem.Application.DTOs
+@using TicketSystem.Application.Interfaces
+@using TicketSystem.Domain.Entities
+@using TicketSystem.Domain.Enums
+
+@inject ITicketService TicketService
+@inject IValidator<CreateTicketDto> Validator
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    <MudCard Elevation="3">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">Tạo đơn yêu cầu mới</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Điền thông tin chi tiết để gửi cấp quản lý phê duyệt</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+
+        <MudCardContent>
+            <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                <MudGrid>
+                    <!-- Loại đơn -->
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="TicketType" Label="Loại đơn" @bind-Value="model.Type" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem Value="TicketType.LeaveRequest">Đơn xin nghỉ phép</MudSelectItem>
+                            <MudSelectItem Value="TicketType.ExpenseClaim">Thanh toán / Hoàn ứng chi phí</MudSelectItem>
+                            <MudSelectItem Value="TicketType.AssetRequest">Xin cấp thiết bị / Tài sản</MudSelectItem>
+                            <MudSelectItem Value="TicketType.AttendanceAdjustment">Giải trình / Bổ sung chấm công</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <!-- Độ ưu tiên -->
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="TicketPriority" Label="Độ ưu tiên" @bind-Value="model.Priority" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem Value="TicketPriority.Low">Thấp</MudSelectItem>
+                            <MudSelectItem Value="TicketPriority.Medium">Bình thường</MudSelectItem>
+                            <MudSelectItem Value="TicketPriority.High">Cao</MudSelectItem>
+                            <MudSelectItem Value="TicketPriority.Urgent">Khẩn cấp</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <!-- Tiêu đề -->
+                    <MudItem xs="12">
+                        <MudTextField Label="Tiêu đề yêu cầu" @bind-Value="model.Title" Variant="Variant.Outlined"
+                                      For="@(() => model.Title)" />
+                    </MudItem>
+
+                    <!-- Form động theo loại: Nghỉ phép hoặc Chấm công -->
+                    @if (model.Type == TicketType.LeaveRequest || model.Type == TicketType.AttendanceAdjustment)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="Từ ngày" @bind-Date="model.StartDate" Variant="Variant.Outlined" Editable="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="Đến ngày" @bind-Date="model.EndDate" Variant="Variant.Outlined" Editable="true" />
+                        </MudItem>
+                    }
+
+                    <!-- Form động theo loại: Hoàn ứng chi phí -->
+                    @if (model.Type == TicketType.ExpenseClaim)
+                    {
+                        <MudItem xs="12">
+                            <MudNumericField Label="Số tiền đề nghị (VNĐ)" @bind-Value="model.Amount" Format="N0" Culture="@System.Globalization.CultureInfo.GetCultureInfo("vi-VN")" Variant="Variant.Outlined" />
+                        </MudItem>
+                    }
+
+                    <!-- Mô tả / Lý do -->
+                    <MudItem xs="12">
+                        <MudTextField Label="Lý do & Nội dung chi tiết" @bind-Value="model.Description" Lines="4" Variant="Variant.Outlined"
+                                      For="@(() => model.Description)" />
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Thanh nút bấm -->
+                <MudCardActions Class="d-flex justify-end gap-2 mt-4 px-0">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Cancel">Hủy bỏ</MudButton>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Đang gửi...</MudText>
+                        }
+                        else
+                        {
+                            <span>Gửi đơn</span>
+                        }
+                    </MudButton>
+                </MudCardActions>
+            </EditForm>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private CreateTicketDto model = new();
+    private bool isSubmitting = false;
+
+    private async Task HandleSubmit()
+    {
+        // 1. Kiểm tra validation bằng FluentValidation
+        var validationResult = await Validator.ValidateAsync(model);
+        if (!validationResult.IsValid)
+        {
+            foreach (var error in validationResult.Errors)
+            {
+                Snackbar.Add(error.ErrorMessage, MudBlazor.Severity.Error);
+            }
+            return;
+        }
+
+        isSubmitting = true;
+
+        // 2. Lấy thông tin user hiện tại từ Cookie/Identity
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        var userName = user.Identity?.Name ?? "Nhân viên";
+
+        // 3. Map DTO sang Entity
+        var newTicket = new Ticket
+        {
+            Title = model.Title,
+            Description = model.Description,
+            Type = model.Type,
+            Priority = model.Priority,
+            StartDate = model.StartDate,
+            EndDate = model.EndDate,
+            Amount = model.Amount,
+            RequesterId = userId,
+            RequesterName = userName
+        };
+
+        // 4. Lưu DB qua TicketService
+        var result = await TicketService.CreateTicketAsync(newTicket);
+        isSubmitting = false;
+
+        if (result)
+        {
+            Snackbar.Add("Gửi đơn yêu cầu thành công!", MudBlazor.Severity.Success);
+            Navigation.NavigateTo("/my-tickets");
+        }
+        else
+        {
+            Snackbar.Add("Có lỗi xảy ra khi tạo đơn. Vui lòng thử lại!", MudBlazor.Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/my-tickets");
+    }
+}
