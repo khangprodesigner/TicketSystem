@@ -93,9 +93,11 @@
 
         var dialog = await DialogService.ShowAsync<ApprovalCommentDialog>($"Xác nhận {actionText}", parameters);
         var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is string comment)
+        // Khắc phục cảnh báo null reference khi xử lý kết quả dialog
+        if (result is not null && !result.Canceled)
         {
+            var comment = result.Data as string ?? string.Empty;
+
             var success = await TicketService.ProcessTicketAsync(ticketId, approverId, approverName, status, comment);
             if (success)
             {
