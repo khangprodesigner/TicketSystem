@@ -1,0 +1,121 @@
+﻿@page "/tickets/{Id:guid}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authorization
+@using TicketSystem.Application.Interfaces
+@using TicketSystem.Domain.Entities
+@using TicketSystem.Domain.Enums
+
+@inject ITicketService TicketService
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/my-tickets"))" Class="mb-3">
+        Quay lại
+    </MudButton>
+
+    @if (ticket == null)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudGrid>
+            <!-- Cột trái: Chi tiết đơn -->
+            <MudItem xs="12" md="7">
+                <MudCard Elevation="2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">@ticket.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Mã đơn: @ticket.Id</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudList T="string" Dense="true">
+                            <MudListItem Icon="@Icons.Material.Filled.Person">
+                                <b>Người yêu cầu:</b> @ticket.RequesterName
+                            </MudListItem>
+                            <MudListItem Icon="@Icons.Material.Filled.Category">
+                                <b>Loại đơn:</b> @ticket.Type
+                            </MudListItem>
+                            <MudListItem Icon="@Icons.Material.Filled.Flag">
+                                <b>Độ ưu tiên:</b> @ticket.Priority
+                            </MudListItem>
+                            <MudListItem Icon="@Icons.Material.Filled.Schedule">
+                                <b>Ngày tạo:</b> @ticket.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            </MudListItem>
+                            @if (ticket.Amount.HasValue)
+                            {
+                                <MudListItem Icon="@Icons.Material.Filled.AttachMoney">
+                                    <b>Số tiền:</b> @ticket.Amount.Value.ToString("N0") VNĐ
+                                </MudListItem>
+                            }
+                            @if (ticket.StartDate.HasValue && ticket.EndDate.HasValue)
+                            {
+                                <MudListItem Icon="@Icons.Material.Filled.DateRange">
+                                    <b>Thời gian:</b> @ticket.StartDate.Value.ToString("dd/MM/yyyy") - @ticket.EndDate.Value.ToString("dd/MM/yyyy")
+                                </MudListItem>
+                            }
+                        </MudList>
+
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.subtitle2">Nội dung chi tiết:</MudText>
+                        <MudPaper Elevation="0" Class="pa-3 mt-1 mud-background-gray">
+                            <MudText Typo="Typo.body2">@ticket.Description</MudText>
+                        </MudPaper>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Cột phải: Timeline Audit Log -->
+            <MudItem xs="12" md="5">
+                <MudCard Elevation="2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Lịch sử phê duyệt</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (ticket.Histories.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Chưa có hoạt động xử lý nào.</MudText>
+                        }
+                        else
+                        {
+                            <MudTimeline TimelinePosition="TimelinePosition.Start">
+                                @foreach (var history in ticket.Histories.OrderByDescending(h => h.ActionDate))
+                                {
+                                    <MudTimelineItem Color="@(history.NewStatus == TicketStatus.Approved ? Color.Success : Color.Error)">
+                                        <ItemContent>
+                                            <MudText Typo="Typo.subtitle2">@history.ActorName - @history.NewStatus</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @history.ActionDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                            </MudText>
+                                            @if (!string.IsNullOrEmpty(history.Comment))
+                                            {
+                                                <MudText Typo="Typo.body2" Class="mt-1">Ghi chú: <i>"@history.Comment"</i></MudText>
+                                            }
+                                        </ItemContent>
+                                    </MudTimelineItem>
+                                }
+                            </MudTimeline>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private Ticket? ticket;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ticket = await TicketService.GetTicketByIdAsync(Id);
+    }
+}

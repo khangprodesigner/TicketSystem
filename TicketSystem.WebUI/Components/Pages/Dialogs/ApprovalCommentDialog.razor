@@ -1,0 +1,29 @@
+﻿@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Bạn có chắc chắn muốn <b>@ActionText</b> đơn yêu cầu này không?
+        </MudText>
+        <MudTextField T="string" Label="Ghi chú / Lý do (không bắt buộc khi duyệt)" 
+                      @bind-Value="comment" Variant="Variant.Outlined" Lines="3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Hủy</MudButton>
+        <MudButton Color="@(ActionText == "Duyệt" ? Color.Success : Color.Error)" 
+                   Variant="Variant.Filled" OnClick="Submit">Xác nhận</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] 
+    public string ActionText { get; set; } = string.Empty;
+
+    private string comment = string.Empty;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(comment));
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,111 @@
+﻿@page "/approvals"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using TicketSystem.Application.Interfaces
+@using TicketSystem.Domain.Entities
+@using TicketSystem.Domain.Enums
+@using TicketSystem.WebUI.Components.Pages.Dialogs
+
+@inject ITicketService TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h5" GutterBottom="true">Trung tâm phê duyệt yêu cầu</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">Danh sách các yêu cầu đang chờ cấp quản lý xem xét</MudText>
+
+    <MudTable Items="@pendingTickets" Dense="true" Hover="true" Striped="true" Loading="@isLoading">
+        <HeaderContent>
+            <MudTh>Người gửi</MudTh>
+            <MudTh>Tiêu đề</MudTh>
+            <MudTh>Loại đơn</MudTh>
+            <MudTh>Độ ưu tiên</MudTh>
+            <MudTh>Ngày gửi</MudTh>
+            <MudTh Style="text-align: right">Hành động</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Người gửi">
+                <MudText Typo="Typo.subtitle2">@context.RequesterName</MudText>
+            </MudTd>
+            <MudTd DataLabel="Tiêu đề">
+                <MudLink Href="@($"/tickets/{context.Id}")" Typo="Typo.body2">@context.Title</MudLink>
+            </MudTd>
+            <MudTd DataLabel="Loại đơn">@context.Type</MudTd>
+            <MudTd DataLabel="Độ ưu tiên">
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">@context.Priority</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Ngày gửi">@context.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Hành động" Style="text-align: right">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" Class="me-2"
+                           OnClick="@(() => ProcessTicket(context.Id, TicketStatus.Approved))">
+                    Duyệt
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => ProcessTicket(context.Id, TicketStatus.Rejected))">
+                    Từ chối
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Class="pa-4">Hiện không có đơn nào cần duyệt.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<Ticket> pendingTickets = new();
+    private bool isLoading = true;
+    private string approverId = string.Empty;
+    private string approverName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        approverId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        approverName = user.Identity?.Name ?? "Quản lý";
+
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        pendingTickets = await TicketService.GetAllPendingTicketsAsync();
+        isLoading = false;
+    }
+
+    private async Task ProcessTicket(Guid ticketId, TicketStatus status)
+    {
+        string actionText = status == TicketStatus.Approved ? "Duyệt" : "Từ chối";
+
+        // Mở Dialog xác nhận và nhập ghi chú
+        var parameters = new DialogParameters<ApprovalCommentDialog>
+        {
+            { x => x.ActionText, actionText }
+        };
+
+        var dialog = await DialogService.ShowAsync<ApprovalCommentDialog>($"Xác nhận {actionText}", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string comment)
+        {
+            var success = await TicketService.ProcessTicketAsync(ticketId, approverId, approverName, status, comment);
+            if (success)
+            {
+                Snackbar.Add($"Đã {actionText.ToLower()} đơn thành công!", Severity.Success);
+                await LoadDataAsync();
+            }
+            else
+            {
+                Snackbar.Add("Xử lý thất bại, vui lòng thử lại.", Severity.Error);
+            }
+        }
+    }
+}
