@@ -1,5 +1,5 @@
 ﻿@page "/approvals"
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Manager")]
 @rendermode InteractiveServer
 
 @using System.Security.Claims

@@ -9,12 +9,13 @@ using TicketSystem.Application.Interfaces;
 using TicketSystem.Infrastructure.Services;
 using FluentValidation;
 using TicketSystem.Application.DTOs;
+using TicketSystem.Infrastructure.Data.Seed;
 
 namespace TicketSystem.WebUI
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,7 @@ namespace TicketSystem.WebUI
                     options.SignIn.RequireConfirmedAccount = false;
                     options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
                 })
+                .AddRoles<IdentityRole>() // Làm tính năng quản lý vai trò (roles) cho người dùng
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
@@ -81,6 +83,13 @@ namespace TicketSystem.WebUI
 
             // Add additional endpoints required by the Identity /Account Razor components.
             app.MapAdditionalIdentityEndpoints();
+            
+            // Phân chia Roles
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                await DbInitializer.SeedRolesAndAdminAsync(services);
+            }
 
             app.Run();
         }
