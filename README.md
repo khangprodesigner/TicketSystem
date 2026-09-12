@@ -13,19 +13,32 @@ Dự án được xây dựng bằng **Blazor Server (.NET 10)** kết hợp th�
 
 ## 📸 Giao diện ứng dụng
 
-### Bảng điều khiển (Dashboard)
+### 1. Dành cho Nhân viên & Tính năng chung
+
+* **Bảng điều khiển (Dashboard):** Hiển thị thống kê cá nhân (đối với Quản lý sẽ hiển thị số liệu toàn bộ công ty).
 ![Dashboard](docs/images/dashboard.png)
 
-#### Form tạo đơn mới
-![Create Ticket](docs/images/create-ticket.png)
-
-#### Danh sách đơn cá nhân (My Tickets)
+* **Danh sách đơn cá nhân (My Tickets):** Tích hợp tìm kiếm nhanh, phân trang và xem chi tiết (nút con mắt 👀).
 ![My Tickets](docs/images/my-tickets.png)
 
-### Lịch sử của một đơn (Audit Log)
+* **Form tạo đơn mới:** Tự động điều chỉnh trường nhập và hiển thị quỹ phép khả dụng đối với đơn xin nghỉ.
+![Create Ticket](docs/images/create-ticket.png)
+
+* **Tiến trình xử lý đơn (Audit Log):** Dòng thời gian chi tiết ghi lại các bước khởi tạo, duyệt/từ chối kèm ghi chú.
 ![Timeline](docs/images/ticket-details.png)
 
+* **Hồ sơ cá nhân (Profile):** Xem số dư ngày phép hiện tại và cập nhật thông tin phòng ban.
+![Profile](docs/images/profile.png)
+
 ---
+
+### 2. Dành riêng cho Quản lý (Manager)
+
+* **Trung tâm duyệt yêu cầu:** Chỉ tài khoản Quản lý mới có quyền truy cập để xem toàn bộ danh sách đơn chờ duyệt.
+![Pending Approvals](docs/images/pending-approvals.png)
+
+* **Hộp thoại phê duyệt:** Quản lý nhập lý do/phản hồi trước khi xác nhận Duyệt hoặc Từ chối đơn.
+![Approval Comment Dialog](docs/images/duyet-don.png)
 
 ## 🛠️ Công nghệ sử dụng
 
