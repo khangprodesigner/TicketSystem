@@ -2,12 +2,28 @@
 
 Hệ thống quản trị và duyệt phiếu yêu cầu nội bộ (xin nghỉ phép, thanh toán chi phí, cấp thiết bị, giải trình chấm công). 
 
-Dự án được xây dựng bằng **Blazor Server (.NET 8)** kết hợp thư viện giao diện **MudBlazor**, tổ chức code theo cấu trúc **Clean Architecture**.
+Dự án được xây dựng bằng **Blazor Server (.NET 10)** kết hợp thư viện giao diện **MudBlazor**, tổ chức code theo cấu trúc **Clean Architecture**.
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/)
 [![Blazor](https://img.shields.io/badge/Blazor-Server-purple.svg)](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)
 [![MudBlazor](https://img.shields.io/badge/MudBlazor-Material%20Design-orange.svg)](https://mudblazor.com/)
 [![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-green.svg)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+
+---
+
+## 📸 Giao diện ứng dụng
+
+### Bảng điều khiển (Dashboard)
+![Dashboard](docs/images/dashboard.png)
+
+#### Form tạo đơn mới
+![Create Ticket](docs/images/create-ticket.png)
+
+#### Danh sách đơn cá nhân (My Tickets)
+![My Tickets](docs/images/my-tickets.png)
+
+### Lịch sử của một đơn (Audit Log)
+![Timeline](docs/images/ticket-details.png)
 
 ---
 
