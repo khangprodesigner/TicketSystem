@@ -12,13 +12,14 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
+        <!-- Trang chủ -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
 
-        <!-- For Manager role-->
+        <!-- Dành cho tài khoản Quản lý -->
         <AuthorizeView Roles="Manager">
             <Authorized>
                 <div class="nav-item px-3">
@@ -29,9 +30,9 @@
             </Authorized>
         </AuthorizeView>
 
+        <!-- Dành cho tất cả User đã đăng nhập -->
         <AuthorizeView>
             <Authorized>
-                <!-- My Web -->
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="my-tickets">
                         <span class="bi bi-list-check" aria-hidden="true"></span> My Tickets
@@ -39,14 +40,23 @@
                 </div>
 
                 <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="profile">
+                        <span class="bi bi-person-circle" aria-hidden="true"></span> Hồ sơ cá nhân
+                    </NavLink>
+                </div>
+
+                <hr class="my-2 text-white-50" />
+
+                <!-- Thông tin tài khoản & Đăng xuất -->
+                <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                        <span class="bi bi-gear" aria-hidden="true"></span> Cài đặt bảo mật
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <input type="hidden" name="ReturnUrl" value="" />
                         <button type="submit" class="nav-link">
                             <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
                         </button>
@@ -89,4 +99,3 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
-

@@ -24,7 +24,15 @@
         </MudButton>
     </MudStack>
 
-    <MudTable Items="@tickets" Dense="true" Hover="true" Striped="true" Loading="@isLoading" LoadingProgressColor="Color.Info">
+    <MudTable Items="@tickets" Dense="true" Hover="true" Striped="true" Loading="@isLoading"
+              LoadingProgressColor="Color.Info" Filter="new Func<Ticket, bool>(FilterSearch)">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Danh sách phiếu</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Placeholder="Tìm theo tiêu đề hoặc nội dung..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium" Class="mt-0" Immediate="true" Clearable="true" />
+        </ToolBarContent>
         <HeaderContent>
             <MudTh>Tiêu đề</MudTh>
             <MudTh>Loại đơn</MudTh>
@@ -34,9 +42,13 @@
             <MudTh Style="text-align: right">Thao tác</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Tiêu đề">
-                <MudText Typo="Typo.subtitle2">@context.Title</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+            <MudTd DataLabel="Tiêu đề" Style="max-width: 320px;">
+                <MudLink Href="@($"/tickets/{context.Id}")" Typo="Typo.subtitle2" Color="Color.Primary">
+                    @context.Title
+                </MudLink>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    @context.Description
+                </MudText>
             </MudTd>
             <MudTd DataLabel="Loại đơn">
                 @GetTicketTypeName(context.Type)
@@ -49,11 +61,16 @@
                 <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
             </MudTd>
             <MudTd DataLabel="Thao tác" Style="text-align: right">
-                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Default" OnClick="@(() => ViewDetails(context.Id))" />
+                <MudTooltip Text="Xem chi tiết & Tiến trình">
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Primary" OnClick="@(() => ViewDetails(context.Id))" />
+                </MudTooltip>
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager RowsPerPageString="Số dòng mỗi trang:" InfoFormat="{first_item}-{last_item} trong {all_items}" />
+        </PagerContent>
         <NoRecordsContent>
-            <MudText Align="Align.Center" Class="pa-4">Chưa có phiếu yêu cầu nào.</MudText>
+            <MudText Align="Align.Center" Class="pa-4">Chưa có phiếu yêu cầu nào phù hợp.</MudText>
         </NoRecordsContent>
     </MudTable>
 </MudContainer>
@@ -62,6 +79,7 @@
     private List<Ticket> tickets = new();
     private bool isLoading = true;
     private string currentUserId = string.Empty;
+    private string searchString = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,7 +92,10 @@
         {
             await LoadTicketsAsync();
         }
-        isLoading = false;
+        else
+        {
+            isLoading = false;
+        }
     }
 
     private async Task LoadTicketsAsync()
@@ -82,6 +103,20 @@
         isLoading = true;
         tickets = await TicketService.GetMyTicketsAsync(currentUserId);
         isLoading = false;
+    }
+
+    private bool FilterSearch(Ticket ticket)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (ticket.Title.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!string.IsNullOrEmpty(ticket.Description) && ticket.Description.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
     }
 
     private Color GetStatusColor(TicketStatus status) => status switch

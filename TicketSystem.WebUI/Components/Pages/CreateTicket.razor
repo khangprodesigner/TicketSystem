@@ -55,7 +55,29 @@
                     </MudItem>
 
                     <!-- Form động theo loại: Nghỉ phép hoặc Chấm công -->
-                    @if (model.Type == TicketType.LeaveRequest || model.Type == TicketType.AttendanceAdjustment)
+                    @if (model.Type == TicketType.LeaveRequest)
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="MudBlazor.Severity.Info" Dense="true" Class="mb-2">
+                                Quỹ phép năm hiện có: <b>@currentLeaveBalance</b> ngày.
+                                @if (calculatedLeaveDays > 0)
+                                {
+                                    <span> Số ngày xin nghỉ dự kiến: <b>@calculatedLeaveDays</b> ngày.</span>
+                                }
+                            </MudAlert>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="Từ ngày" Date="@model.StartDate"
+                                           DateChanged="@((DateTime? d) => { model.StartDate = d; OnDatesChanged(); })"
+                                           Variant="Variant.Outlined" Editable="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker Label="Đến ngày" Date="@model.EndDate"
+                                           DateChanged="@((DateTime? d) => { model.EndDate = d; OnDatesChanged(); })"
+                                           Variant="Variant.Outlined" Editable="true" />
+                        </MudItem>
+                    }
+                    else if (model.Type == TicketType.AttendanceAdjustment)
                     {
                         <MudItem xs="12" sm="6">
                             <MudDatePicker Label="Từ ngày" @bind-Date="model.StartDate" Variant="Variant.Outlined" Editable="true" />
@@ -101,11 +123,50 @@
 </MudContainer>
 
 @code {
+    private double currentLeaveBalance = 0; // Placeholder for leave balance, can be fetched from a service if needed
+    private double calculatedLeaveDays = 0; // Placeholder for calculated leave days, can be computed based on StartDate and EndDate
+
     private CreateTicketDto model = new();
     private bool isSubmitting = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch current leave balance if needed
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
 
+        if (!string.IsNullOrEmpty(userId))
+        {
+            currentLeaveBalance = await TicketService.GetUserLeaveBalanceAsync(userId);
+        }
+    }
+
+    private void OnDatesChanged()
+    {
+        if (model.StartDate.HasValue && model.EndDate.HasValue)
+        {
+            var diff = (model.EndDate.Value.Date - model.StartDate.Value.Date).TotalDays + 1; // +1 to include both start and end date
+            calculatedLeaveDays = diff > 0 ? diff : 0;
+            model.TotalDaysorHours = calculatedLeaveDays;
+        }
+    }
     private async Task HandleSubmit()
     {
+        if (model.Type == TicketType.LeaveRequest)
+        {
+            OnDatesChanged();
+            if (calculatedLeaveDays <= 0)
+            {
+                Snackbar.Add("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.",MudBlazor.Severity.Error);
+                return;
+            }
+            if (calculatedLeaveDays > currentLeaveBalance)
+            {
+                Snackbar.Add($"Số ngày nghỉ ({calculatedLeaveDays} ngày) vượt quá quỹ phép hiện tại ({currentLeaveBalance} ngày)!", MudBlazor.Severity.Error);
+                return;
+            }
+        }
         // 1. Kiểm tra validation bằng FluentValidation
         var validationResult = await Validator.ValidateAsync(model);
         if (!validationResult.IsValid)

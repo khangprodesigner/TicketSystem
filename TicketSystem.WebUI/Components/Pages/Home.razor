@@ -1,7 +1,199 @@
 ﻿@page "/"
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+@using System.Security.Claims
+@using TicketSystem.Application.DTOs
+@using TicketSystem.Application.Interfaces
 
-<h1>Hello, world!</h1>
+@inject ITicketService TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
-Welcome to your new app.
+<PageTitle>Bảng điều khiển - TicketSystem</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <AuthorizeView>
+        <Authorized>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-6">
+                <div>
+                    <MudText Typo="Typo.h5">Xin chào, @context.User.Identity?.Name!</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Chào mừng bạn quay trở lại với hệ thống phê duyệt nội bộ</MudText>
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => Navigation.NavigateTo("/create-ticket"))">
+                    Tạo đơn mới
+                </MudButton>
+            </MudStack>
+
+            @if (dashboardData == null)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            else
+            {
+                <!-- Thống kê Card KPI -->
+                <MudGrid Class="mb-6">
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Class="pa-4 d-flex justify-space-between align-center" Elevation="2">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Đơn chờ duyệt</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Warning">@dashboardData.PendingCount</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Color="Color.Warning" Size="Size.Large" />
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Class="pa-4 d-flex justify-space-between align-center" Elevation="2">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Đơn đã duyệt</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Success">@dashboardData.ApprovedCount</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Class="pa-4 d-flex justify-space-between align-center" Elevation="2">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Đơn bị từ chối</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Error">@dashboardData.RejectedCount</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Large" />
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Class="pa-4 d-flex justify-space-between align-center" Elevation="2">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Phép năm còn lại</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Info">@dashboardData.LeaveBalance</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Info" Size="Size.Large" />
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid>
+                    <!-- Cột trái: Phân bổ loại đơn dùng Progress Linear -->
+                    <MudItem xs="12" md="7">
+                        <MudCard Elevation="2">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Phân bổ loại đơn</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Thống kê số lượng đơn theo từng danh mục nghiệp vụ</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                @{
+                                    double total = dashboardData.TicketTypeDistribution.Sum();
+                                }
+                                @if (total == 0)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4 text-center">
+                                        Chưa có đơn nào trong hệ thống.
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudStack Spacing="3">
+                                        @for (int i = 0; i < dashboardData.TicketTypeLabels.Length; i++)
+                                        {
+                                            var label = dashboardData.TicketTypeLabels[i];
+                                            var count = dashboardData.TicketTypeDistribution[i];
+                                            var percent = Math.Round((count / total) * 100, 1);
+                                            var color = GetBarColor(i);
+
+                                            <div>
+                                                <div class="d-flex justify-space-between mb-1">
+                                                    <MudText Typo="Typo.body2"><b>@label</b></MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@count đơn (@percent%)</MudText>
+                                                </div>
+                                                <MudProgressLinear Color="@color" Value="@percent" Rounded="true" Size="Size.Medium" />
+                                            </div>
+                                        }
+                                    </MudStack>
+                                }
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <!-- Cột phải: Lối tắt nhanh -->
+                    <MudItem xs="12" md="5">
+                        <MudCard Elevation="2">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Lối tắt nhanh</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Truy cập nhanh các chức năng chính</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudStack Spacing="2">
+                                    <MudButton Variant="Variant.Outlined" FullWidth="true" StartIcon="@Icons.Material.Filled.ListAlt" OnClick="@(() => Navigation.NavigateTo("/my-tickets"))">
+                                        Xem danh sách đơn cá nhân
+                                    </MudButton>
+                                    <AuthorizeView Roles="Manager" Context="managerContext">
+                                        <Authorized>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true" StartIcon="@Icons.Material.Filled.Rule" OnClick="@(() => Navigation.NavigateTo("/approvals"))">
+                                                Vào trung tâm duyệt yêu cầu
+                                            </MudButton>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Info" FullWidth="true" StartIcon="@Icons.Material.Filled.AccountCircle" OnClick="@(() => Navigation.NavigateTo("/profile"))">
+                                        Xem và sửa hồ sơ cá nhân
+                                    </MudButton>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <MudPaper Class="pa-8 text-center mt-6" Elevation="2">
+                <MudText Typo="Typo.h4" GutterBottom="true">Hệ Thống Phê Duyệt Nội Bộ (TicketSystem)</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                    Vui lòng đăng nhập để tạo phiếu yêu cầu hoặc xét duyệt hồ sơ.
+                </MudText>
+                <a href="Account/Login">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary">Đăng nhập ngay</MudButton>
+                </a>
+            </MudPaper>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudContainer>
+
+@code {
+    private DashboardDto? dashboardData;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            var isManager = user.IsInRole("Manager");
+
+            if (isManager)
+            {
+                dashboardData = await TicketService.GetManagerDashboardDataAsync();
+                var userLeave = await TicketService.GetUserLeaveBalanceAsync(userId);
+                dashboardData.LeaveBalance = userLeave;
+            }
+            else
+            {
+                dashboardData = await TicketService.GetUserDashboardDataAsync(userId);
+            }
+        }
+    }
+
+    private Color GetBarColor(int index) => index switch
+    {
+        0 => Color.Primary,
+        1 => Color.Success,
+        2 => Color.Info,
+        3 => Color.Secondary,
+        _ => Color.Default
+    };
+}

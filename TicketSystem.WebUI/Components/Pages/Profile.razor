@@ -1,0 +1,120 @@
+﻿@page "/profile"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Identity
+@using TicketSystem.Application.Interfaces
+@using TicketSystem.Infrastructure.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ITicketService TicketService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    <MudText Typo="Typo.h5" GutterBottom="true">Thông tin tài khoản</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">Xem và cập nhật thông tin cá nhân trong hệ thống</MudText>
+
+    @if (currentUser == null)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudGrid>
+            <!-- Card tóm tắt bên trái -->
+            <MudItem xs="12" sm="4">
+                <MudCard Elevation="2" Class="d-flex flex-column align-center pa-4 text-center">
+                    <MudAvatar Color="Color.Primary" Style="height:80px; width:80px; font-size:2rem;" Class="mb-3">
+                        @(string.IsNullOrWhiteSpace(currentUser.FullName) ? "U" : currentUser.FullName.Substring(0, 1).ToUpper())
+                    </MudAvatar>
+                    <MudText Typo="Typo.h6">@currentUser.FullName</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@currentUser.Email</MudText>
+
+                    <MudDivider Class="my-3 w-100" />
+
+                    <MudText Typo="Typo.body2">Quỹ phép năm hiện có</MudText>
+                    <MudChip T="string" Color="Color.Success" Class="mt-1" Size="Size.Medium">
+                        <b>@currentUser.LeaveBalance</b> ngày
+                    </MudChip>
+                </MudCard>
+            </MudItem>
+
+            <!-- Card chỉnh sửa bên phải -->
+            <MudItem xs="12" sm="8">
+                <MudCard Elevation="2">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle1">Chỉnh sửa hồ sơ</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack Spacing="3">
+                            <MudTextField Label="Email" Value="@currentUser.Email" ReadOnly="true" Variant="Variant.Outlined" Disabled="true" />
+                            <MudTextField Label="Họ và tên" @bind-Value="fullName" Variant="Variant.Outlined" />
+                            <MudTextField Label="Phòng ban" @bind-Value="department" Variant="Variant.Outlined" />
+                        </MudStack>
+                    </MudCardContent>
+                    <MudCardActions Class="justify-end pa-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProfile" Disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                <MudText Class="ms-2">Đang lưu...</MudText>
+                            }
+                            else
+                            {
+                                <span>Lưu thay đổi</span>
+                            }
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private ApplicationUser? currentUser;
+    private string fullName = string.Empty;
+    private string department = string.Empty;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userClaims = authState.User;
+        var userId = userClaims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            currentUser = await UserManager.FindByIdAsync(userId);
+            if (currentUser != null)
+            {
+                fullName = currentUser.FullName;
+                department = currentUser.Department;
+            }
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        if (currentUser == null) return;
+        isSaving = true;
+
+        var success = await TicketService.UpdateUserProfileAsync(currentUser.Id, fullName, department);
+        isSaving = false;
+
+        if (success)
+        {
+            currentUser.FullName = fullName;
+            currentUser.Department = department;
+            Snackbar.Add("Cập nhật thông tin thành công!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Có lỗi xảy ra, vui lòng thử lại.", Severity.Error);
+        }
+    }
+}

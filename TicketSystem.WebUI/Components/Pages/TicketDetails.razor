@@ -2,7 +2,6 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
-@using Microsoft.AspNetCore.Authorization
 @using TicketSystem.Application.Interfaces
 @using TicketSystem.Domain.Entities
 @using TicketSystem.Domain.Enums
@@ -10,10 +9,12 @@
 @inject ITicketService TicketService
 @inject NavigationManager Navigation
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
-    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/my-tickets"))" Class="mb-3">
-        Quay lại
-    </MudButton>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <div class="mb-4">
+        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/my-tickets"))">
+            Quay lại danh sách
+        </MudButton>
+    </div>
 
     @if (ticket == null)
     {
@@ -21,8 +22,8 @@
     }
     else
     {
-        <MudGrid>
-            <!-- Cột trái: Chi tiết đơn -->
+        <MudGrid Spacing="3">
+            <!-- CỘT TRÁI (7 phần): Chi tiết đơn -->
             <MudItem xs="12" md="7">
                 <MudCard Elevation="2">
                     <MudCardHeader>
@@ -68,39 +69,79 @@
                 </MudCard>
             </MudItem>
 
-            <!-- Cột phải: Timeline Audit Log -->
+            <!-- CỘT PHẢI (5 phần): Timeline Audit Log -->
             <MudItem xs="12" md="5">
                 <MudCard Elevation="2">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.h6">Lịch sử phê duyệt</MudText>
+                            <MudText Typo="Typo.h6">Tiến trình xử lý đơn</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Toàn bộ nhật ký và lịch sử xét duyệt</MudText>
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent>
-                        @if (ticket.Histories.Count == 0)
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Chưa có hoạt động xử lý nào.</MudText>
-                        }
-                        else
-                        {
-                            <MudTimeline TimelinePosition="TimelinePosition.Start">
-                                @foreach (var history in ticket.Histories.OrderByDescending(h => h.ActionDate))
-                                {
-                                    <MudTimelineItem Color="@(history.NewStatus == TicketStatus.Approved ? Color.Success : Color.Error)">
-                                        <ItemContent>
-                                            <MudText Typo="Typo.subtitle2">@history.ActorName - @history.NewStatus</MudText>
+                        <MudTimeline TimelinePosition="TimelinePosition.Start">
+
+                            <!-- Mốc 1: Khởi tạo đơn -->
+                            <MudTimelineItem Color="Color.Info" Icon="@Icons.Material.Filled.Send" Size="Size.Small">
+                                <ItemContent>
+                                    <MudPaper Elevation="0" Class="pa-3 mud-background-gray rounded">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <MudText Typo="Typo.subtitle2"><b>@ticket.RequesterName</b> đã gửi</MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">Khởi tạo</MudChip>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @ticket.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                        </MudText>
+                                    </MudPaper>
+                                </ItemContent>
+                            </MudTimelineItem>
+
+                            <!-- Mốc 2: Lịch sử xử lý từ bảng TicketHistory -->
+                            @foreach (var history in ticket.Histories.OrderBy(h => h.ActionDate))
+                            {
+                                var isApproved = history.NewStatus == TicketStatus.Approved;
+                                var itemColor = isApproved ? Color.Success : Color.Error;
+                                var itemIcon = isApproved ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel;
+                                var statusText = isApproved ? "Đã duyệt đơn" : "Đã từ chối đơn";
+
+                                <MudTimelineItem Color="@itemColor" Icon="@itemIcon" Size="Size.Small">
+                                    <ItemContent>
+                                        <MudPaper Elevation="0" Class="pa-3 mud-background-gray rounded">
+                                            <div class="d-flex justify-space-between align-center">
+                                                <MudText Typo="Typo.subtitle2"><b>@history.ActorName</b></MudText>
+                                                <MudChip T="string" Size="Size.Small" Color="@itemColor" Variant="Variant.Filled">
+                                                    @history.NewStatus
+                                                </MudChip>
+                                            </div>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 @history.ActionDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                                             </MudText>
-                                            @if (!string.IsNullOrEmpty(history.Comment))
+
+                                            @if (!string.IsNullOrWhiteSpace(history.Comment))
                                             {
-                                                <MudText Typo="Typo.body2" Class="mt-1">Ghi chú: <i>"@history.Comment"</i></MudText>
+                                                <MudDivider Class="my-2" />
+                                                <MudText Typo="Typo.body2" Style="font-style: italic;">
+                                                    "@history.Comment"
+                                                </MudText>
                                             }
-                                        </ItemContent>
-                                    </MudTimelineItem>
-                                }
-                            </MudTimeline>
-                        }
+                                        </MudPaper>
+                                    </ItemContent>
+                                </MudTimelineItem>
+                            }
+
+                            <!-- Mốc chờ (nếu đơn chưa được duyệt/từ chối) -->
+                            @if (ticket.Status == TicketStatus.Pending)
+                            {
+                                <MudTimelineItem Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Small">
+                                    <ItemContent>
+                                        <MudText Typo="Typo.body2" Color="Color.Warning">
+                                            <b>Đang chờ cấp quản lý xem xét...</b>
+                                        </MudText>
+                                    </ItemContent>
+                                </MudTimelineItem>
+                            }
+
+                        </MudTimeline>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
