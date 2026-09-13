@@ -149,15 +149,83 @@
             }
         </Authorized>
         <NotAuthorized>
-            <MudPaper Class="pa-8 text-center mt-6" Elevation="2">
-                <MudText Typo="Typo.h4" GutterBottom="true">Hệ Thống Phê Duyệt Nội Bộ (TicketSystem)</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Vui lòng đăng nhập để tạo phiếu yêu cầu hoặc xét duyệt hồ sơ.
-                </MudText>
-                <a href="Account/Login">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary">Đăng nhập ngay</MudButton>
-                </a>
-            </MudPaper>
+            <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+                <MudPaper Class="pa-8 text-center" Elevation="3">
+                    <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                    <MudText Typo="Typo.h4" GutterBottom="true" Color="Color.Primary">
+                        Hệ Thống Phê Duyệt Nội Bộ (TicketSystem)
+                    </MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+                        Ứng dụng quản lý quy trình gửi và duyệt ticket, phân quyền nghiệp vụ nhiều cấp.
+                    </MudText>
+
+                    <!-- Khung thông tin tài khoản dùng thử -->
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="text-start mb-6">
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Badge" Class="mr-1" Size="Size.Small" />
+                            Tài khoản trải nghiệm dành cho người xem (Demo Accounts)
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                            Bạn có thể sử dụng trực tiếp các tài khoản được cấu hình sẵn dưới đây để test quy trình duyệt đơn chéo, hoặc tự đăng ký (Bằng navbar bên trái):
+                        </MudText>
+
+                        <MudGrid Spacing="3">
+                            <!-- 1. Cột Manager -->
+                            <MudItem xs="12" md="4">
+                                <MudPaper Outlined="true" Class="pa-4 h-100" Style="background-color: var(--mud-palette-background-grey);">
+                                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.SupervisorAccount" Class="mb-2">
+                                        Quản lý (Manager)
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
+                                        Vào trung tâm phê duyệt, xét duyệt/từ chối đơn và xem báo cáo tổng quan.
+                                    </MudText>
+                                    <MudDivider Class="my-2" />
+                                    <MudText Typo="Typo.body2"><strong>Email:</strong> <code>manager@cep.org.vn</code></MudText>
+                                    <MudText Typo="Typo.body2"><strong>Mật khẩu:</strong> <code>Cep@123</code></MudText>
+                                </MudPaper>
+                            </MudItem>
+
+                            <!-- 2. Cột User 1 (Khang) -->
+                            <MudItem xs="12" md="4">
+                                <MudPaper Outlined="true" Class="pa-4 h-100" Style="background-color: var(--mud-palette-background-grey);">
+                                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Person" Class="mb-2">
+                                        Nhân viên (User 1)
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
+                                        Tạo đơn xin nghỉ phép, đề xuất thiết bị, theo dõi lịch sử xử lý đơn cá nhân.
+                                    </MudText>
+                                    <MudDivider Class="my-2" />
+                                    <MudText Typo="Typo.body2"><strong>Email:</strong> <code>khang@gmail.com</code></MudText>
+                                    <MudText Typo="Typo.body2"><strong>Mật khẩu:</strong> <code>Cep@123</code></MudText>
+                                </MudPaper>
+                            </MudItem>
+
+                            <!-- 3. Cột User 2 (Abc) -->
+                            <MudItem xs="12" md="4">
+                                <MudPaper Outlined="true" Class="pa-4 h-100" Style="background-color: var(--mud-palette-background-grey);">
+                                    <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Person" Class="mb-2">
+                                        Nhân viên (User 2)
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">
+                                        Tạo đơn xin nghỉ phép, đề xuất thiết bị, theo dõi lịch sử xử lý đơn cá nhân.
+                                    </MudText>
+                                    <MudDivider Class="my-2" />
+                                    <MudText Typo="Typo.body2"><strong>Email:</strong> <code>abc@gmail.com</code></MudText>
+                                    <MudText Typo="Typo.body2"><strong>Mật khẩu:</strong> <code>Cep@123</code></MudText>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </MudAlert>
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Href="Account/Login">
+                        Đến trang Đăng nhập ngay
+                    </MudButton>
+                </MudPaper>
+            </MudContainer>
         </NotAuthorized>
     </AuthorizeView>
 </MudContainer>

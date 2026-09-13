@@ -83,12 +83,16 @@ namespace TicketSystem.WebUI
 
             // Add additional endpoints required by the Identity /Account Razor components.
             app.MapAdditionalIdentityEndpoints();
-            
+
             // Phân chia Roles
             using (var scope = app.Services.CreateScope())
             {
-                var services = scope.ServiceProvider;
-                await DbInitializer.SeedRolesAndAdminAsync(services);
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                // Tự động tạo bảng nếu chưa có:
+                await dbContext.Database.MigrateAsync();
+
+                // Sau đó mới seed dữ liệu:
+                await DbInitializer.SeedRolesAndAdminAsync(scope.ServiceProvider);
             }
 
             app.Run();
